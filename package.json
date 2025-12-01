@@ -1,0 +1,40 @@
+{
+  "name": "@testdino/mcp",
+  "version": "1.0.0",
+  "description": "A MCP server for TestDino",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "testdino-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "bun run dist/index.js",
+    "dev": "bunx tsx src/index.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cursor",
+    "ai"
+  ],
+  "author": "TestDino",
+  "license": "MIT",
+  "dependencies": {
+    "@currents/mcp": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
