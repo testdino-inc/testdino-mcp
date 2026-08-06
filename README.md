@@ -81,7 +81,7 @@ All through simple conversational commands.
 
 ### Available Tools
 
-The server provides 33 tools across eight domains:
+The server provides 35 tools across nine domains:
 
 **Test Execution & Results:**
 
@@ -138,6 +138,13 @@ The server provides 33 tools across eight domains:
 33. **`get_external_issue`** - Fetch previously created issues by their IDs or keys (one or many) and return their current status in the provider (Jira, Linear, Asana).
 
 > **Provider support**: All providers can be connected and status-checked. Issue **creation** works with Jira, Linear, Asana, and monday.com. Issue **read-back** works with Jira, Linear, and Asana. GitHub is supported as a PR/CI integration, not an issue tracker.
+
+**AI Insights:**
+
+34. **`get_ai_insights`** - TestDino's AI analysis at three levels: project overview (per-category failure counts + top offenders over a date range), run (AI failure categorization, failure clusters, error-analysis table, LLM-written summary), and test case (recommendations + quick fixes). Returns a `disabled` status when AI features are turned off for the project (Settings → AI).
+35. **`get_trace_analysis`** - Resolve a failing test's hosted Playwright trace to a short-lived download URL and return a runbook for local trace-CLI debugging (open → actions → snapshot → close).
+
+> AI Insights are also available inline: pass `include_ai_insights: true` to `get_run_details` (attaches the run's AI Insights under `ai_insights`) or `debug_testcase` (attaches recommendations + quick fixes under `ai_fixes`).
 
 ### Installation Options
 

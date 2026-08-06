@@ -70,6 +70,11 @@ This comprehensive guide covers all available tools in the `@testdino/mcp` MCP s
 - [create_external_issue](#create_external_issue)
 - [get_external_issue](#get_external_issue)
 
+**AI Insights:**
+
+- [get_ai_insights](#get_ai_insights)
+- [get_trace_analysis](#get_trace_analysis)
+
 ---
 
 ## health
@@ -844,6 +849,8 @@ Use this when you need to debug a failing test or understand exactly what happen
 
 **Deprecated aliases** (retained for backward compatibility — prefer the primary names above): `testcaseid` → `testcase_id`, `by_title` → `testcase_name`, `by_testrun_id` → `testrun_id`.
 
+**Trace download link:** when a test case has a Playwright trace, each returned item includes `traceDownloadUrl` (a directly downloadable link to the trace archive) plus `traceExpiresAt`. The link is short-lived, so re-run the tool to refresh an expired one instead of storing it. Cases without a trace omit the field.
+
 **Note:** The PAT is automatically read from the `TESTDINO_PAT` environment variable configured in `.cursor/mcp.json`.
 
 ### Configuration
@@ -1008,11 +1015,13 @@ Unlike `get_testcase_details` which shows details for a single execution, `debug
 
 ### Parameters
 
-| Parameter         | Type   | Required | Description                                                                                                                                                                 |
-| ----------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `projectId`       | string | Yes      | Project ID (Required). The TestDino project identifier.                                                                                                                     |
-| `testcase_name`   | string | Yes      | Test case name/title to debug (Required). Example: 'Verify user can logout and login' or 'Verify that User Can Complete the Journey from Login to Order Placement @webkit'. |
-| `suite_file_path` | string | No       | Optional spec file path to disambiguate when several tests share the same title. Example: 'tests/checkout.spec.ts'.                                                         |
+| Parameter             | Type    | Required | Description                                                                                                                                                                                                                                                                                                                   |
+| --------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `projectId`           | string  | Yes      | Project ID (Required). The TestDino project identifier.                                                                                                                                                                                                                                                                       |
+| `testcase_name`       | string  | Yes      | Test case name/title to debug (Required). Example: 'Verify user can logout and login' or 'Verify that User Can Complete the Journey from Login to Order Placement @webkit'.                                                                                                                                                   |
+| `suite_file_path`     | string  | No       | Optional spec file path to disambiguate when several tests share the same title. Example: 'tests/checkout.spec.ts'.                                                                                                                                                                                                           |
+| `include_ai_insights` | boolean | No       | Attach AI recommendations + quick fixes for this test under `ai_fixes` (targets the most recent failing execution unless `testrun_id` is set). Returns `disabled` when AI is off for the project. If a section reports `processing`, poll `get_ai_insights(testrun_id=..., testcase_id=...)` instead of re-calling this tool. |
+| `testrun_id`          | string  | No       | Only with `include_ai_insights`: target the AI fixes at this specific run instead of the most recent failing execution.                                                                                                                                                                                                       |
 
 **Note:** The PAT is automatically read from the `TESTDINO_PAT` environment variable configured in `.cursor/mcp.json`.
 
@@ -1325,14 +1334,15 @@ This tool provides a comprehensive view of an entire test run. Unlike `list_test
 
 Use this when you want a full picture of what happened in a specific test run, need to analyze the overall health of a test execution, or query for specific rerun attempts.
 
-**Note**: This tool accepts only `testrun_id` and `counter` parameters. For filtering by branch, time, author, environment, or PR, use the `list_testruns` tool first to find the test run IDs, then use this tool to get detailed information.
+**Note**: This tool accepts `testrun_id`, `counter`, and `include_ai_insights`. For filtering by branch, time, author, environment, or PR, use the `list_testruns` tool first to find the test run IDs, then use this tool to get detailed information.
 
 ### Parameters
 
-| Parameter    | Type             | Required | Default | Description                                                                                                                                                           |
-| ------------ | ---------------- | -------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `testrun_id` | string           | No       | -       | Test run ID(s). Can be a single ID or comma-separated IDs for batch operations (max 20). Example: 'test_run_xyz123' or 'run1,run2,run3'. Optional if using `counter`. |
-| `counter`    | number \| string | No       | -       | Test run counter. A number for a single run (e.g. `47`), or a comma-separated string for a batch (max 20): `'47,48,49'`. Optional if using `testrun_id`.              |
+| Parameter             | Type             | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------- | ---------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `testrun_id`          | string           | No       | -       | Test run ID(s). Can be a single ID or comma-separated IDs for batch operations (max 20). Example: 'test_run_xyz123' or 'run1,run2,run3'. Optional if using `counter`.                                                                                                                                                                                         |
+| `counter`             | number \| string | No       | -       | Test run counter. A number for a single run (e.g. `47`), or a comma-separated string for a batch (max 20): `'47,48,49'`. Optional if using `testrun_id`.                                                                                                                                                                                                      |
+| `include_ai_insights` | boolean          | No       | `false` | Attach the run's AI Insights (AI failure categorization, failure clusters, error-analysis table, LLM summary) under `ai_insights`. Requires a single `testrun_id` (not `counter`, not a batch). Returns `disabled` when AI is off for the project. If a section reports `processing`, poll `get_ai_insights(testrun_id=...)` instead of re-calling this tool. |
 
 **Note:** The PAT is automatically read from the `TESTDINO_PAT` environment variable configured in `.cursor/mcp.json`. You don't need to pass it as a parameter.
 
@@ -3564,6 +3574,65 @@ update_session({
 **Returns**: Current issue details including status in the provider.
 
 > **Provider support summary**: Every provider (Jira, Linear, Asana, monday.com, GitHub) can be **connected** and **status-checked**. Issue **creation** works with Jira, Linear, Asana, and monday.com. Issue **read-back** (`get_external_issue`) works with Jira, Linear, and Asana. GitHub is a PR/CI integration, not an issue tracker.
+
+---
+
+## get_ai_insights
+
+**Purpose**: Return TestDino's AI Insights at three levels — project, run, or a single test case. One tool; the level is inferred from which ids you pass. AI failure categorization and the run/case AI outputs are generated by TestDino's AI Insight service.
+
+**Parameters**:
+
+| Parameter     | Type   | Required | Description                                                                                         |
+| ------------- | ------ | -------- | --------------------------------------------------------------------------------------------------- |
+| `projectId`   | string | Yes      | The TestDino project identifier.                                                                    |
+| `testrun_id`  | string | No       | Run mode: AI analysis for this run. Also required for case mode.                                    |
+| `testcase_id` | string | No       | Case mode (with `testrun_id`): recommendations + quick fixes for this test case (its `pw_test_id`). |
+| `environment` | string | No       | Project overview only: filter by environment name.                                                  |
+| `dateRange`   | string | No       | Project overview only: e.g. `"7d"`, `"30d"`, or `"custom"` with `fromDate`/`toDate`.                |
+| `fromDate`    | string | No       | Project overview only: custom range start (`YYYY-MM-DD`).                                           |
+| `toDate`      | string | No       | Project overview only: custom range end (`YYYY-MM-DD`).                                             |
+
+- **No ids** → project overview: per-category failure counts (flaky / bug / ui_change / unknown) + top offenders.
+- **`testrun_id`** → run analysis: categorization, failure clusters, error-analysis table, LLM run summary.
+- **`testrun_id` + `testcase_id`** → case fixes: recommendations + quick fixes.
+
+`testcase_id` without `testrun_id` returns an error (case mode needs the run the case executed in).
+
+**Lazy generation**: AI payloads are produced on demand. A section may report `not_generated` / `queued` / `processing` / `failed` / `skipped` before `completed`. Poll `get_ai_insights` (same ids) every few seconds while pending. Sections degrade independently to `{ status: "unavailable", … }`. Requires AI features enabled for the project (Settings → AI): when a surface is turned off it returns `status: "disabled"` with a message to enable it — surface that instead of polling (polling never turns a disabled surface into data). Project overview defaults to a 7-day window — widen with `dateRange="30d"` for older runs.
+
+**Example prompts**:
+
+- _"What should we fix first in this project?"_ → project overview
+- _"Analyse test run test_run_123."_ → run mode
+- _"How do I fix the failing checkout test in run test_run_123?"_ → case mode
+
+**Returns**: The AI Insights block for the requested level.
+
+---
+
+## get_trace_analysis
+
+**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright trace CLI. Returns a runbook (the CLI protocol plus how to classify the failure and propose a fix) and, when a `testcase_id` is given, a short-lived signed download URL for that case's hosted trace. The analysis itself runs on the caller's machine.
+
+**Parameters**:
+
+| Parameter     | Type   | Required | Description                                                                      |
+| ------------- | ------ | -------- | -------------------------------------------------------------------------------- |
+| `projectId`   | string | Yes      | The TestDino project identifier.                                                 |
+| `testcase_id` | string | No       | Playwright `pw_test_id` of the failing case whose hosted trace to resolve.       |
+| `testrun_id`  | string | No       | Run scope for `testcase_id` (single run). Pass it to target the run in question. |
+
+Pass `projectId` alone to get just the runbook for a `trace.zip` you already have locally.
+
+**Notes**: `trace_url` is a short-lived SAS link — download it immediately; re-call the tool if it expires. With `testcase_id` alone the lookup resolves to the test's latest run, whose trace may be `null` (traces are usually captured only on retry) — scope with `testrun_id`. Requires a shell to `curl` the trace and run `npx playwright trace …` (Playwright 1.59+).
+
+**Example prompts**:
+
+- _"Analyse the trace for the failing login test in run test_run_123."_
+- _"Give me the Playwright trace runbook for a local trace.zip."_
+
+**Returns**: `skill` runbook, `trace_source`, `trace_url` + `trace_expires_at`, `playwright_min_version`, `notes[]`.
 
 ---
 

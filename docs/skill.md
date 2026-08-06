@@ -230,6 +230,7 @@ Call health()
 |-----------|------|-------------|
 | `testrun_id` | string | Single ID, or comma-separated IDs (max 20): `'id1,id2,id3'` |
 | `counter` | number \| string | A number for a single run (e.g. `47`), or a comma-separated string for a batch (max 20): `'47,48,49'` |
+| `include_ai_insights` | boolean | Attach the run's AI Insights under `ai_insights` (single `testrun_id` only). Poll `get_ai_insights(testrun_id)` if a section is still `processing`. |
 
 **Response includes**: full summary, test statistics by status, error category breakdown, test suites, and all test cases in the run.
 
@@ -324,6 +325,8 @@ list_testruns() → get run IDs → get_run_details() for the specific run
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `suite_file_path` | string | Spec file path to disambiguate when several tests share the same title, e.g. `'tests/checkout.spec.ts'` |
+| `include_ai_insights` | boolean | Attach AI recommendations + quick fixes under `ai_fixes` (latest failing execution unless `testrun_id` is set). Poll `get_ai_insights(testrun_id, testcase_id)` if a section is `processing`. |
+| `testrun_id` | string | Only with `include_ai_insights`: target a specific run instead of the latest failure. |
 
 **What it returns**:
 
@@ -934,6 +937,58 @@ If the provider is not connected, the response is `INTEGRATION_NOT_CONNECTED` wi
 **Optional**: `target` (e.g. Jira `{ defaultApp }`).
 
 **Response**: a single ID returns the issue directly; multiple IDs return `{ issues: [{ issueId, issue } | { issueId, error }] }` so one bad ID does not fail the batch.
+
+### `get_ai_insights`
+
+**Purpose**: TestDino's AI Insights at three levels — project, run, and single test case. One tool; the level is inferred from which ids you pass.
+
+**Required parameters**: `projectId`
+
+**Optional parameters**:
+
+- _(none besides `projectId`)_ → **project** overview: per-category failure counts (flaky / bug / ui_change / unknown) with the top offenders in each. Also accepts `environment`, `dateRange` (e.g. `"7d"`, `"30d"`), `fromDate`, `toDate` (YYYY-MM-DD).
+- `testrun_id` → **run** analysis: AI failure categorization, failure clusters, the error-analysis table, and the LLM run summary.
+- `testrun_id` + `testcase_id` → **case** fixes: recommendations + quick fixes for that failing test.
+
+`testcase_id` requires `testrun_id` (else the tool errors `Case mode needs both...`). For the latest failing execution of a case, use `debug_testcase(include_ai_insights=true)` instead.
+
+**Critical rules**:
+
+- **AI payloads are generated lazily** — a section may report `not_generated` / `queued` / `processing` / `failed` / `skipped` before `completed`. On a pending status, **poll `get_ai_insights`** (run → `get_ai_insights(testrun_id)`; case → `get_ai_insights(testrun_id, testcase_id)`); do not re-call the heavier `get_run_details` / `debug_testcase`.
+- **Sections degrade independently** — a failed section returns `{ status: "unavailable", ... }`; the rest is still valid. Report what you have.
+- **Requires AI features enabled** (Settings → AI). If disabled, surface that rather than reporting empty insights as "no problems".
+- **Older runs need a wider window** — project overview defaults to 7 days; if it returns `not_generated` for a project whose runs are older, retry with `dateRange="30d"`.
+
+**Pattern**:
+
+```
+get_ai_insights(projectId)                              → "what should we fix first?"
+get_ai_insights(projectId, testrun_id)                  → triage one run; poll this if a section is "processing"
+get_ai_insights(projectId, testrun_id, testcase_id)     → recommendations + quick fixes for one test
+```
+
+### `get_trace_analysis`
+
+**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright trace CLI (`npx playwright trace …`, Playwright 1.59+). Returns a runbook (the CLI protocol + how to classify the failure and propose a fix) plus, when a `testcase_id` is given, a short-lived download URL for that case's hosted trace.
+
+**Required parameters**: `projectId`
+
+**Optional parameters**: `testcase_id` (the Playwright `pw_test_id`), `testrun_id` (run scope). Pass `projectId` alone to get just the runbook for a local `trace.zip`.
+
+**Critical rules**:
+
+- **The analysis runs on the user's machine, not here.** This tool only returns a URL + runbook — you need a shell to `curl` the trace and run `npx playwright trace …`. In a chat-only client, surface the `trace_url` to the user; do not claim you analysed the trace.
+- **`trace_url` is a short-lived SAS (minutes). Download it immediately.** If it expired, re-call to mint a fresh one.
+- **Pass `testrun_id` to target the run in question.** With `testcase_id` alone the lookup resolves to the test's latest run, whose trace may be `null` (traces are usually captured only on retry).
+
+**Pattern**:
+
+```
+get_trace_analysis(projectId, testcase_id="<pw_test_id>", testrun_id="<the run>")
+→ If trace_url: curl it to trace.zip NOW, then follow the runbook's CLI protocol
+→ If trace_url is null: read notes[] — wrong run, trace disabled, or use a local trace.zip
+→ Report the root cause with quoted trace evidence + a concrete fix
+```
 
 ---
 

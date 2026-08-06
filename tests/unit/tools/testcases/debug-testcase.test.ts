@@ -30,6 +30,37 @@ describe("handleDebugTestCase", () => {
     ).rejects.toThrow("projectId is required");
   });
 
+  it("forwards include_ai_insights and testrun_id when set", async () => {
+    mockFetchSuccess({ debugging_prompt: "x", ai_fixes: {} });
+
+    await handleDebugTestCase(
+      createArgs({
+        projectId: "proj-1",
+        testcase_name: "Verify login",
+        include_ai_insights: true,
+        testrun_id: "run-1",
+      }) as never
+    );
+
+    const url = getLastFetchUrl();
+    expect(url).toContain("include_ai_insights=true");
+    expect(url).toContain("testrun_id=run-1");
+  });
+
+  it("omits include_ai_insights when not set", async () => {
+    mockFetchSuccess({ debugging_prompt: "x" });
+
+    await handleDebugTestCase(
+      createArgs({
+        projectId: "proj-1",
+        testcase_name: "Verify login",
+      }) as never
+    );
+
+    const url = getLastFetchUrl();
+    expect(url).not.toContain("include_ai_insights");
+  });
+
   it("should append screenshot hint when response contains screenshot attachments", async () => {
     const mockData = {
       historicalData: [
