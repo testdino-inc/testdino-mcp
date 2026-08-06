@@ -1,6 +1,6 @@
 {
   "name": "@testdino/mcp",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "mcpName": "io.github.testdino-hq/testdino-mcp",
   "type": "module",
   "main": "dist/index.js",
@@ -15,7 +15,8 @@
   "homepage": "https://docs.testdino.com/testdino-mcp/overview/",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc",
     "start": "tsx dist/index.js",
     "dev": "tsx src/index.ts",
     "prepublishOnly": "npm run build",

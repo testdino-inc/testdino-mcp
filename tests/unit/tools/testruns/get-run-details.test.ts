@@ -77,6 +77,32 @@ describe("handleGetRunDetails", () => {
     expect(url).toContain("testrun_id=run-1%2Crun-2%2Crun-3");
   });
 
+  it("forwards include_ai_insights=true when set", async () => {
+    mockFetchSuccess({ id: "run-1", ai_insights: {} });
+
+    await handleGetRunDetails(
+      createArgs({
+        projectId: "proj-1",
+        testrun_id: "run-abc",
+        include_ai_insights: true,
+      }) as never
+    );
+
+    const url = getLastFetchUrl();
+    expect(url).toContain("include_ai_insights=true");
+  });
+
+  it("omits include_ai_insights when not set", async () => {
+    mockFetchSuccess({ id: "run-1" });
+
+    await handleGetRunDetails(
+      createArgs({ projectId: "proj-1", testrun_id: "run-abc" }) as never
+    );
+
+    const url = getLastFetchUrl();
+    expect(url).not.toContain("include_ai_insights");
+  });
+
   it("works with only projectId (no testrun_id or counter)", async () => {
     mockFetchSuccess({ runs: [] });
 

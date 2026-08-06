@@ -89,6 +89,11 @@ import {
   handleCreateExternalIssue,
   getExternalIssueTool,
   handleGetExternalIssue,
+  // AI Insights
+  getAiInsightsTool,
+  handleGetAiInsights,
+  getTraceAnalysisTool,
+  handleGetTraceAnalysis,
 } from "./tools/index.js";
 
 // Get the directory of the current module
@@ -116,7 +121,7 @@ async function main() {
   const server = new Server(
     {
       name: "@testdino/mcp",
-      version: "2.0.1",
+      version: "2.0.2",
     },
     {
       capabilities: {
@@ -169,6 +174,9 @@ async function main() {
     connectIntegrationTool,
     createExternalIssueTool,
     getExternalIssueTool,
+    // AI Insights
+    getTraceAnalysisTool,
+    getAiInsightsTool,
   ];
 
   /**
@@ -464,6 +472,18 @@ async function main() {
     if (name === "get_external_issue") {
       return await handleGetExternalIssue(
         args as Parameters<typeof handleGetExternalIssue>[0]
+      );
+    }
+
+    // AI Insights
+    if (name === "get_trace_analysis") {
+      return await handleGetTraceAnalysis(
+        args as Parameters<typeof handleGetTraceAnalysis>[0]
+      );
+    }
+    if (name === "get_ai_insights") {
+      return await handleGetAiInsights(
+        args as Parameters<typeof handleGetAiInsights>[0]
       );
     }
 

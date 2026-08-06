@@ -10,12 +10,14 @@ interface GetRunDetailsArgs {
   projectId: string;
   testrun_id?: string;
   counter?: string | number;
+  include_ai_insights?: boolean;
 }
 
 interface GetRunDetailsParams {
   projectId: string;
   testrun_id?: string;
   counter?: string | number;
+  include_ai_insights?: boolean;
 }
 
 export const getRunDetailsTool = {
@@ -38,6 +40,11 @@ export const getRunDetailsTool = {
         type: ["number", "string"],
         description:
           "Run counter. A number for a single run (e.g. 47), or a comma-separated string ('47,48,49', max 20) for a batch.",
+      },
+      include_ai_insights: {
+        type: "boolean",
+        description:
+          "Attach the run's AI Insights (failure categorization, clusters, error-analysis table, LLM summary) under `ai_insights`. Requires a single testrun_id (not counter, not a batch). If a section reports `processing`, poll get_ai_insights(testrun_id=...) instead of re-calling this tool.",
       },
     },
     required: ["projectId"],
@@ -74,6 +81,10 @@ export async function handleGetRunDetails(args?: GetRunDetailsArgs) {
       // string (comma-separated batch). Do NOT coerce with Number() — that would
       // turn "47,48" into NaN and drop the batch.
       params.counter = args.counter;
+    }
+
+    if (args.include_ai_insights === true) {
+      params.include_ai_insights = true;
     }
 
     const runDetailsUrl = endpoints.getRunDetails(params);

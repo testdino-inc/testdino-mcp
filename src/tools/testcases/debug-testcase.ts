@@ -12,6 +12,8 @@ interface DebugTestCaseArgs {
   projectId: string;
   testcase_name: string;
   suite_file_path?: string;
+  include_ai_insights?: boolean;
+  testrun_id?: string;
 }
 
 export const debugTestCaseTool = {
@@ -34,6 +36,16 @@ export const debugTestCaseTool = {
         type: "string",
         description:
           "Optional spec file path to disambiguate when several tests share the same title. Example: 'tests/checkout.spec.ts'.",
+      },
+      include_ai_insights: {
+        type: "boolean",
+        description:
+          "Attach AI recommendations + quick fixes for this test under `ai_fixes` (targets the most recent failing execution unless testrun_id is set). If a section reports `processing`, poll get_ai_insights(testrun_id=..., testcase_id=...) instead of re-calling this tool.",
+      },
+      testrun_id: {
+        type: "string",
+        description:
+          "Only with include_ai_insights: target the AI fixes at this specific run instead of the most recent failure.",
       },
     },
     required: ["projectId", "testcase_name"],
@@ -66,6 +78,10 @@ export async function handleDebugTestCase(args?: DebugTestCaseArgs) {
       ...(args.suite_file_path
         ? { suite_file_path: String(args.suite_file_path) }
         : {}),
+      ...(args.include_ai_insights === true
+        ? { include_ai_insights: true }
+        : {}),
+      ...(args.testrun_id ? { testrun_id: String(args.testrun_id) } : {}),
     });
 
     const response = await apiRequestJson<unknown>(debugUrl, {

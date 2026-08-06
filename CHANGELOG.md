@@ -2,6 +2,22 @@
 
 All notable changes to `@testdino/mcp` are documented here.
 
+## 2.0.2 (2026-08-06)
+
+### Added
+
+- **AI Insights over MCP.** New `get_ai_insights` tool surfaces TestDino's AI
+  analysis at three levels: project overview (per-category failure counts + top
+  offenders over a date range), run (AI failure categorization, failure
+  clusters, error-analysis table, LLM-written summary), and test case
+  (recommendations + quick fixes). When AI features are turned off for a project
+  (Settings → AI) it returns a `disabled` status with a message to enable them.
+- **`get_trace_analysis`** - resolves a failing test's hosted Playwright trace to
+  a short-lived download URL and returns a runbook for local trace-CLI debugging.
+- **`include_ai_insights` flag** on `get_run_details` (attaches the run's AI
+  Insights under `ai_insights`) and `debug_testcase` (attaches recommendations +
+  quick fixes under `ai_fixes`).
+
 ## 2.0.1 (2026-07-20)
 
 ### Changed

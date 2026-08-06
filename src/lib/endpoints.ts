@@ -70,6 +70,7 @@ export const endpoints = {
     projectId: string;
     testrun_id?: string; // Optional: Single ID or comma-separated IDs for batch (max 20)
     counter?: string | number; // Number for a single run, or comma-separated string for a batch (max 20)
+    include_ai_insights?: boolean; // Attach the run's AI Insights under `ai_insights` (single testrun_id only)
   }): string => {
     const baseUrl = getBaseUrl();
     const { projectId, ...queryParams } = params;
@@ -265,12 +266,26 @@ export const endpoints = {
     projectId: string;
     testcase_name: string;
     suite_file_path?: string;
+    include_ai_insights?: boolean;
+    testrun_id?: string;
   }): string => {
     const baseUrl = getBaseUrl();
-    const { projectId, testcase_name, suite_file_path } = params;
+    const {
+      projectId,
+      testcase_name,
+      suite_file_path,
+      include_ai_insights,
+      testrun_id,
+    } = params;
     const queryParams = new URLSearchParams({ testcase_name });
     if (suite_file_path) {
       queryParams.append("suite_file_path", suite_file_path);
+    }
+    if (include_ai_insights) {
+      queryParams.append("include_ai_insights", "true");
+    }
+    if (testrun_id) {
+      queryParams.append("testrun_id", testrun_id);
     }
     return `${baseUrl}/api/mcp/${projectId}/debug-testcase?${queryParams.toString()}`;
   },
@@ -603,5 +618,51 @@ export const endpoints = {
     return `${baseUrl}/api/mcp/integrations/${projectId}/${provider}/issues/${encodeURIComponent(
       issueId
     )}${queryString}`;
+  },
+
+  // ─── AI Insights ─────────────────────────────────────────────────────────
+
+  /**
+   * Get AI Insights at project / run / case level (mirrors the streaming tool).
+   * GET /api/mcp/:projectId/get-ai-insights
+   * @param params.projectId - Required: Project ID
+   * @param params.testrun_id - Optional: run mode; also required for case mode
+   * @param params.testcase_id - Optional: case mode (requires testrun_id)
+   * @param params.environment - Optional: project overview filter
+   * @param params.dateRange - Optional: project overview window (e.g. '7d', '30d')
+   * @param params.fromDate - Optional: project overview custom range start (YYYY-MM-DD)
+   * @param params.toDate - Optional: project overview custom range end (YYYY-MM-DD)
+   */
+  getAiInsights: (params: {
+    projectId: string;
+    testrun_id?: string;
+    testcase_id?: string;
+    environment?: string;
+    dateRange?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): string => {
+    const baseUrl = getBaseUrl();
+    const { projectId, ...queryParams } = params;
+    const queryString = buildQueryString(queryParams);
+    return `${baseUrl}/api/mcp/${projectId}/get-ai-insights${queryString}`;
+  },
+
+  /**
+   * Get the Playwright trace-analysis runbook plus a signed hosted-trace URL.
+   * GET /api/mcp/:projectId/get-trace-analysis
+   * @param params.projectId - Required: Project ID (path param on this surface)
+   * @param params.testcase_id - Optional: pw_test_id whose hosted trace to resolve
+   * @param params.testrun_id - Optional: run scope for testcase_id
+   */
+  getTraceAnalysis: (params: {
+    projectId: string;
+    testcase_id?: string;
+    testrun_id?: string;
+  }): string => {
+    const baseUrl = getBaseUrl();
+    const { projectId, ...queryParams } = params;
+    const queryString = buildQueryString(queryParams);
+    return `${baseUrl}/api/mcp/${projectId}/get-trace-analysis${queryString}`;
   },
 };

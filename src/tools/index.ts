@@ -142,3 +142,13 @@ export {
   getExternalIssueTool,
   handleGetExternalIssue,
 } from "./integrations/get-external-issue.js";
+
+// AI Insights tools
+export {
+  getAiInsightsTool,
+  handleGetAiInsights,
+} from "./ai-insights/get-ai-insights.js";
+export {
+  getTraceAnalysisTool,
+  handleGetTraceAnalysis,
+} from "./ai-insights/get-trace-analysis.js";
