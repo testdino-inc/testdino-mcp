@@ -19,7 +19,9 @@ interface DebugTestCaseArgs {
 export const debugTestCaseTool = {
   name: "debug_testcase",
   description:
-    "Fetch historical execution and failure data for a specific test case. Returns raw historical data with test run details (ID, counter, branch), test runs summary, and a debugging prompt from the API. Each execution includes its associated test run information (testRunId, testRunCounter, branch) to help correlate failures across different test runs and branches. The AI client will analyze the data to identify failure patterns, find root causes, and provide fix suggestions. Use this when you need to debug a failing test case. Example: 'Debug test case \"Verify user login\"'.",
+    "Fetch historical execution and failure data for a specific test case. Returns raw historical data with test run details (ID, counter, branch), test runs summary, and a debugging prompt from the API. Each execution includes its associated test run information (testRunId, testRunCounter, branch) to help correlate failures across different test runs and branches. The AI client will analyze the data to identify failure patterns, find root causes, and provide fix suggestions. Use this when you need to debug a failing test case. Example: 'Debug test case \"Verify user login\"'. " +
+    "Set include_ai_insights=true to also get TestDino's stored AI analysis for this test under `ai_fixes`: recommendations (investigation/remediation steps + reasoning + historical insight) and quick fixes (concrete fixes, often with code snippets, plus long-term stabilization steps). By default they target the most recent failing execution; pass testrun_id to target a specific run. " +
+    'AI payloads are generated lazily — if `ai_fixes` sections report status "processing"/"not_generated", poll get_ai_insights(testrun_id=...) until "completed" instead of re-calling this tool.',
   inputSchema: {
     type: "object",
     properties: {

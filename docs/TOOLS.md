@@ -3613,7 +3613,7 @@ update_session({
 
 ## get_trace_analysis
 
-**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright trace CLI. Returns a runbook (the CLI protocol plus how to classify the failure and propose a fix) and, when a `testcase_id` is given, a short-lived signed download URL for that case's hosted trace. The analysis itself runs on the caller's machine.
+**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright agent CLI. Returns a runbook (the CLI protocol plus how to classify the failure and propose a fix) and, when a `testcase_id` is given, a short-lived signed download URL for that case's hosted trace. The analysis itself runs on the caller's machine.
 
 **Parameters**:
 
@@ -3623,7 +3623,7 @@ update_session({
 | `testcase_id` | string | No       | Playwright `pw_test_id` of the failing case whose hosted trace to resolve.       |
 | `testrun_id`  | string | No       | Run scope for `testcase_id` (single run). Pass it to target the run in question. |
 
-Pass `projectId` alone to get just the runbook for a `trace.zip` you already have locally.
+Pass `projectId` alone to get just the runbook for a `trace.zip` you already have locally. Note: `projectId` is **required even for this runbook-only path** — this stdio package routes on `/:projectId/…`, so a project ID must be supplied even though the static runbook does not depend on it.
 
 **Notes**: `trace_url` is a short-lived SAS link — download it immediately; re-call the tool if it expires. With `testcase_id` alone the lookup resolves to the test's latest run, whose trace may be `null` (traces are usually captured only on retry) — scope with `testrun_id`. Requires a shell to `curl` the trace and run `npx playwright trace …` (Playwright 1.59+).
 
