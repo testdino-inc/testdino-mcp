@@ -954,7 +954,7 @@ If the provider is not connected, the response is `INTEGRATION_NOT_CONNECTED` wi
 
 **Critical rules**:
 
-- **AI payloads are generated lazily** — a section may report `not_generated` / `queued` / `processing` / `failed` / `skipped` before `completed` (case-mode `ai_fixes` report `in_progress` instead of `processing`). On a pending status, **poll `get_ai_insights`** (run → `get_ai_insights(testrun_id)`; case → `get_ai_insights(testrun_id, testcase_id)`); do not re-call the heavier `get_run_details` / `debug_testcase`.
+- **AI payloads are generated lazily** — a section may report `not_generated` / `queued` / `processing` / `failed` before `completed` (case-mode `ai_fixes` report `in_progress` instead of `processing`). On a pending status, **poll `get_ai_insights`** (run → `get_ai_insights(testrun_id)`; case → `get_ai_insights(testrun_id, testcase_id)`); do not re-call the heavier `get_run_details` / `debug_testcase`.
 - **Sections degrade independently** — a section that errored returns `{ status: "unavailable", statusCode, ... }`; the rest is still valid. A 5xx or timeout is transient (retry once via `get_ai_insights`); a 4xx (bad ids) is terminal. Report what you have.
 - **Requires AI features enabled** (Settings → AI). If off, sections return a terminal `disabled` status — surface it and do not poll, rather than reporting empty insights as "no problems".
 - **Older runs need a wider window** — project overview defaults to 7 days; if it returns `not_generated` for a project whose runs are older, retry with `dateRange="30d"`.
