@@ -22,9 +22,9 @@ interface GetTraceAnalysisArgs {
 export const getTraceAnalysisTool = {
   name: "get_trace_analysis",
   description:
-    "Debug a failing Playwright test from its trace.zip using the Playwright trace CLI (npx playwright trace …, Playwright 1.59+). " +
+    "Debug a failing Playwright test from its trace.zip using the Playwright agent CLI (npx playwright trace …, Playwright 1.59+). " +
     "Returns a runbook that teaches the exact CLI protocol (open → actions → action → snapshot → close) plus how to classify the failure and propose a fix. " +
-    "Pass testcase_id (the Playwright pw_test_id) to also get a short-lived download URL for that case's hosted trace; optionally scope with testrun_id. " +
+    "Pass projectId + testcase_id (the Playwright pw_test_id) to also get a short-lived download URL for that case's hosted trace; optionally scope with testrun_id. " +
     "Omit the ids to just get the runbook for a trace.zip you already have locally. " +
     "The analysis runs on your machine — download the trace, run the CLI commands yourself, then report the root cause and fix.",
   inputSchema: {

@@ -1015,13 +1015,13 @@ Unlike `get_testcase_details` which shows details for a single execution, `debug
 
 ### Parameters
 
-| Parameter             | Type    | Required | Description                                                                                                                                                                                                                                                                                                                   |
-| --------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `projectId`           | string  | Yes      | Project ID (Required). The TestDino project identifier.                                                                                                                                                                                                                                                                       |
-| `testcase_name`       | string  | Yes      | Test case name/title to debug (Required). Example: 'Verify user can logout and login' or 'Verify that User Can Complete the Journey from Login to Order Placement @webkit'.                                                                                                                                                   |
-| `suite_file_path`     | string  | No       | Optional spec file path to disambiguate when several tests share the same title. Example: 'tests/checkout.spec.ts'.                                                                                                                                                                                                           |
-| `include_ai_insights` | boolean | No       | Attach AI recommendations + quick fixes for this test under `ai_fixes` (targets the most recent failing execution unless `testrun_id` is set). Returns `disabled` when AI is off for the project. If a section reports `processing`, poll `get_ai_insights(testrun_id=..., testcase_id=...)` instead of re-calling this tool. |
-| `testrun_id`          | string  | No       | Only with `include_ai_insights`: target the AI fixes at this specific run instead of the most recent failing execution.                                                                                                                                                                                                       |
+| Parameter             | Type    | Required | Description                                                                                                                                                                                                                                                                                                                    |
+| --------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `projectId`           | string  | Yes      | Project ID (Required). The TestDino project identifier.                                                                                                                                                                                                                                                                        |
+| `testcase_name`       | string  | Yes      | Test case name/title to debug (Required). Example: 'Verify user can logout and login' or 'Verify that User Can Complete the Journey from Login to Order Placement @webkit'.                                                                                                                                                    |
+| `suite_file_path`     | string  | No       | Optional spec file path to disambiguate when several tests share the same title. Example: 'tests/checkout.spec.ts'.                                                                                                                                                                                                            |
+| `include_ai_insights` | boolean | No       | Attach AI recommendations + quick fixes for this test under `ai_fixes` (targets the most recent failing execution unless `testrun_id` is set). Returns `disabled` when AI is off for the project. If a section reports `in_progress`, poll `get_ai_insights(testrun_id=..., testcase_id=...)` instead of re-calling this tool. |
+| `testrun_id`          | string  | No       | Only with `include_ai_insights`: target the AI fixes at this specific run instead of the most recent failing execution.                                                                                                                                                                                                        |
 
 **Note:** The PAT is automatically read from the `TESTDINO_PAT` environment variable configured in `.cursor/mcp.json`.
 
@@ -3599,7 +3599,7 @@ update_session({
 
 `testcase_id` without `testrun_id` returns an error (case mode needs the run the case executed in).
 
-**Lazy generation**: AI payloads are produced on demand. A section may report `not_generated` / `queued` / `processing` / `failed` / `skipped` before `completed`. Poll `get_ai_insights` (same ids) every few seconds while pending. Sections degrade independently to `{ status: "unavailable", … }`. Requires AI features enabled for the project (Settings → AI): when a surface is turned off it returns `status: "disabled"` with a message to enable it — surface that instead of polling (polling never turns a disabled surface into data). Project overview defaults to a 7-day window — widen with `dateRange="30d"` for older runs.
+**Lazy generation**: AI payloads are produced on demand. A section may report `not_generated` / `queued` / `processing` / `failed` before `completed` (case-mode `ai_fixes` sections report `in_progress` instead of `processing`). An `unavailable` section carries the upstream `statusCode`: a 5xx or timeout is transient (retry once via `get_ai_insights`), a 4xx (bad ids) is terminal. Poll `get_ai_insights` (same ids) every few seconds while pending. Sections degrade independently to `{ status: "unavailable", … }`. Requires AI features enabled for the project (Settings → AI): when a surface is turned off it returns `status: "disabled"` with a message to enable it — surface that instead of polling (polling never turns a disabled surface into data). Project overview defaults to a 7-day window — widen with `dateRange="30d"` for older runs.
 
 **Example prompts**:
 
@@ -3613,7 +3613,7 @@ update_session({
 
 ## get_trace_analysis
 
-**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright trace CLI. Returns a runbook (the CLI protocol plus how to classify the failure and propose a fix) and, when a `testcase_id` is given, a short-lived signed download URL for that case's hosted trace. The analysis itself runs on the caller's machine.
+**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright agent CLI. Returns a runbook (the CLI protocol plus how to classify the failure and propose a fix) and, when a `testcase_id` is given, a short-lived signed download URL for that case's hosted trace. The analysis itself runs on the caller's machine.
 
 **Parameters**:
 
@@ -3623,7 +3623,7 @@ update_session({
 | `testcase_id` | string | No       | Playwright `pw_test_id` of the failing case whose hosted trace to resolve.       |
 | `testrun_id`  | string | No       | Run scope for `testcase_id` (single run). Pass it to target the run in question. |
 
-Pass `projectId` alone to get just the runbook for a `trace.zip` you already have locally.
+Pass `projectId` alone to get just the runbook for a `trace.zip` you already have locally. Note: `projectId` is **required even for this runbook-only path** — this stdio package routes on `/:projectId/…`, so a project ID must be supplied even though the static runbook does not depend on it.
 
 **Notes**: `trace_url` is a short-lived SAS link — download it immediately; re-call the tool if it expires. With `testcase_id` alone the lookup resolves to the test's latest run, whose trace may be `null` (traces are usually captured only on retry) — scope with `testrun_id`. Requires a shell to `curl` the trace and run `npx playwright trace …` (Playwright 1.59+).
 

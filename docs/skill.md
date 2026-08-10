@@ -325,7 +325,7 @@ list_testruns() → get run IDs → get_run_details() for the specific run
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `suite_file_path` | string | Spec file path to disambiguate when several tests share the same title, e.g. `'tests/checkout.spec.ts'` |
-| `include_ai_insights` | boolean | Attach AI recommendations + quick fixes under `ai_fixes` (latest failing execution unless `testrun_id` is set). Poll `get_ai_insights(testrun_id, testcase_id)` if a section is `processing`. |
+| `include_ai_insights` | boolean | Attach AI recommendations + quick fixes under `ai_fixes` (latest failing execution unless `testrun_id` is set). Poll `get_ai_insights(testrun_id, testcase_id)` if a section is `in_progress`. |
 | `testrun_id` | string | Only with `include_ai_insights`: target a specific run instead of the latest failure. |
 
 **What it returns**:
@@ -954,9 +954,9 @@ If the provider is not connected, the response is `INTEGRATION_NOT_CONNECTED` wi
 
 **Critical rules**:
 
-- **AI payloads are generated lazily** — a section may report `not_generated` / `queued` / `processing` / `failed` / `skipped` before `completed`. On a pending status, **poll `get_ai_insights`** (run → `get_ai_insights(testrun_id)`; case → `get_ai_insights(testrun_id, testcase_id)`); do not re-call the heavier `get_run_details` / `debug_testcase`.
-- **Sections degrade independently** — a failed section returns `{ status: "unavailable", ... }`; the rest is still valid. Report what you have.
-- **Requires AI features enabled** (Settings → AI). If disabled, surface that rather than reporting empty insights as "no problems".
+- **AI payloads are generated lazily** — a section may report `not_generated` / `queued` / `processing` / `failed` before `completed` (case-mode `ai_fixes` report `in_progress` instead of `processing`). On a pending status, **poll `get_ai_insights`** (run → `get_ai_insights(testrun_id)`; case → `get_ai_insights(testrun_id, testcase_id)`); do not re-call the heavier `get_run_details` / `debug_testcase`.
+- **Sections degrade independently** — a section that errored returns `{ status: "unavailable", statusCode, ... }`; the rest is still valid. A 5xx or timeout is transient (retry once via `get_ai_insights`); a 4xx (bad ids) is terminal. Report what you have.
+- **Requires AI features enabled** (Settings → AI). If off, sections return a terminal `disabled` status — surface it and do not poll, rather than reporting empty insights as "no problems".
 - **Older runs need a wider window** — project overview defaults to 7 days; if it returns `not_generated` for a project whose runs are older, retry with `dateRange="30d"`.
 
 **Pattern**:
@@ -969,11 +969,11 @@ get_ai_insights(projectId, testrun_id, testcase_id)     → recommendations + qu
 
 ### `get_trace_analysis`
 
-**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright trace CLI (`npx playwright trace …`, Playwright 1.59+). Returns a runbook (the CLI protocol + how to classify the failure and propose a fix) plus, when a `testcase_id` is given, a short-lived download URL for that case's hosted trace.
+**Purpose**: Debug a failing Playwright test from its `trace.zip` using the Playwright agent CLI (`npx playwright trace …`, Playwright 1.59+). Returns a runbook (the CLI protocol + how to classify the failure and propose a fix) plus, when a `testcase_id` is given, a short-lived download URL for that case's hosted trace.
 
 **Required parameters**: `projectId`
 
-**Optional parameters**: `testcase_id` (the Playwright `pw_test_id`), `testrun_id` (run scope). Pass `projectId` alone to get just the runbook for a local `trace.zip`.
+**Optional parameters**: `testcase_id` (the Playwright `pw_test_id`), `testrun_id` (run scope). Pass `projectId` alone to get just the runbook for a local `trace.zip` — `projectId` is required even on this runbook-only path (the stdio server routes on `/:projectId/…`).
 
 **Critical rules**:
 
