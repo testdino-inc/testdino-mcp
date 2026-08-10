@@ -25,7 +25,7 @@ export const getRunDetailsTool = {
   description:
     "Get detailed information about test runs. Shows test statistics (passed, failed, skipped, flaky), all test suites and cases, git metadata, and error details. Supports batch operations (comma-separated IDs, max 20). Use this to analyze test execution health or debug specific failures. " +
     "Set include_ai_insights=true (single testrun_id only) to also get the run's AI Insights under `ai_insights`: AI failure categorization (flaky/bug/ui_change), failure clusters, new-failures cards, the error-analysis table, and the LLM-written run summary. " +
-    'AI payloads are generated lazily — if `ai_insights` sections report status "processing"/"not_generated", poll get_ai_insights(testrun_id=...) until "completed" instead of re-calling this tool. An "unavailable" section means the AI service timed out or errored — retry once via get_ai_insights; it is transient, not terminal.',
+    'AI payloads are generated lazily — if `ai_insights` sections report status "processing"/"not_generated", poll get_ai_insights(testrun_id=...) until "completed" instead of re-calling this tool. An "unavailable" section carries the upstream statusCode: a 5xx or timeout is transient (retry once via get_ai_insights), a 4xx (bad ids) is terminal.',
   inputSchema: {
     type: "object",
     properties: {
